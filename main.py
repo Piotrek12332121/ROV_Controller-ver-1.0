@@ -3,6 +3,7 @@ from MainWindow import MainApp
 import sys
 
 app=QApplication(sys.argv)
-window=MainApp()
+window=MainApp(app)
 window.show()
+
 app.exec()
