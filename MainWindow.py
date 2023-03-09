@@ -1,8 +1,7 @@
-from PySide6.QtWidgets import QWidget ,QMainWindow,QPushButton,QHBoxLayout
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QWidget ,QMainWindow,QPushButton,QHBoxLayout,QFrame,QComboBox
 from PySide6.QtWidgets import QApplication, QWidget,QSlider,QVBoxLayout,QLabel
-
+from PySide6.QtCore import QObject, Qt
+import serial.tools.list_ports
 """
 The class that contains the main window
 
@@ -15,9 +14,13 @@ class MainApp(QMainWindow,QWidget):
         self.app=app
         menu_bar=self.menuBar()
         file_menu=menu_bar.addMenu("Menu")
+
         quit_action=file_menu.addAction("Quit")
         quit_action.triggered.connect(self.quit_app)
+        file_menu=menu_bar.addMenu("Set commands")  # TODO apply
         self.setGeometry(100, 100, 400, 300)
+
+        # Setting up sliders and connecting them with functions
 
         self.sliderA = QSlider(Qt.Vertical)
         self.sliderB = QSlider(Qt.Vertical)
@@ -45,14 +48,25 @@ class MainApp(QMainWindow,QWidget):
         self.sliderC.valueChanged.connect(self.on_sliderC_value_changed)
         self.sliderD.valueChanged.connect(self.on_sliderD_value_changed)
 
+        ### USB Port menu box 
+
+        self.portComboBox = QComboBox(self)
+        self.portComboBox.setGeometry(50, 50, 200, 30)
+
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            self.portComboBox.addItem(port.device)
+
+        print(self.portComboBox.currentIndex())
+
         layout=QVBoxLayout()
 
         row_0=QHBoxLayout()
 
-        labelA = QLabel("Silnik A")
-        labelB = QLabel("Silnik B")
-        labelC = QLabel("Silnik C")
-        labelD = QLabel("Silnik D")
+        labelA = QLabel("Engine A")
+        labelB = QLabel("Engine B")
+        labelC = QLabel("Engine C")
+        labelD = QLabel("Engine D")
 
         row_0.addWidget(labelA)
         row_0.addWidget(labelB)
@@ -66,14 +80,30 @@ class MainApp(QMainWindow,QWidget):
         row_1.addWidget(self.sliderD)
         
         row_2=QHBoxLayout()
-        button = QPushButton("Włącz wyjście")
+        labelPort = QLabel("Port:")
+        row_2.addWidget(labelPort)
+        row_2.addWidget(self.portComboBox)
+
+        button = QPushButton("Connect!")
         button.setCheckable(True) 
         button.toggled.connect(self.onToggled)
+        row_2.addWidget(button)
 
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine) 
+        line.setFrameShadow(QFrame.Sunken)
+
+
+
+
+        ### generates overall main shape of the app
+        layout.addLayout(row_2)
+        layout.addWidget(line)
         layout.addLayout(row_0)
         layout.addLayout(row_1)
-        layout.addWidget(button)
+   
 
+        
 
         widget=QWidget()
         widget.setLayout(layout)
@@ -81,7 +111,7 @@ class MainApp(QMainWindow,QWidget):
         self.setCentralWidget(widget)
 
 
-
+    ### checks if any key was pressed, if so sends commands via chosen USB Port 
     def keyPressEvent(self, event):
             if event.key() == Qt.Key_J:
                 print("Left key pressed")
@@ -111,7 +141,11 @@ class MainApp(QMainWindow,QWidget):
     def onToggled(self, checked):
         if checked:
             print("Pressed")
+            
         else:
             print("Released")
     def quit_app(self):
         self.app.quit()
+
+
+    
