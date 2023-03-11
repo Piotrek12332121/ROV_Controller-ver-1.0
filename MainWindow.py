@@ -12,12 +12,14 @@ class MainApp(QMainWindow,QWidget):
         super().__init__()
         self.setWindowTitle("ROV controller ver 1.0")
         self.app=app
+        self.is_serial_active=False
+
         menu_bar=self.menuBar()
         file_menu=menu_bar.addMenu("Menu")
 
         quit_action=file_menu.addAction("Quit")
         quit_action.triggered.connect(self.quit_app)
-        file_menu=menu_bar.addMenu("Set commands")  # TODO apply
+
         self.setGeometry(100, 100, 400, 300)
 
         # Setting up sliders and connecting them with functions
@@ -52,12 +54,11 @@ class MainApp(QMainWindow,QWidget):
 
         self.portComboBox = QComboBox(self)
         self.portComboBox.setGeometry(50, 50, 200, 30)
-
         ports = serial.tools.list_ports.comports()
         for port in ports:
             self.portComboBox.addItem(port.device)
 
-        print(self.portComboBox.currentIndex())
+        
 
         layout=QVBoxLayout()
 
@@ -85,8 +86,7 @@ class MainApp(QMainWindow,QWidget):
         row_2.addWidget(self.portComboBox)
 
         button = QPushButton("Connect!")
-        button.setCheckable(True) 
-        button.toggled.connect(self.onToggled)
+        button.clicked.connect(self.onToggled)
         row_2.addWidget(button)
 
         line = QFrame()
@@ -101,9 +101,6 @@ class MainApp(QMainWindow,QWidget):
         layout.addWidget(line)
         layout.addLayout(row_0)
         layout.addLayout(row_1)
-   
-
-        
 
         widget=QWidget()
         widget.setLayout(layout)
@@ -112,38 +109,128 @@ class MainApp(QMainWindow,QWidget):
 
 
     ### checks if any key was pressed, if so sends commands via chosen USB Port 
-    def keyPressEvent(self, event):
-            if event.key() == Qt.Key_J:
-                print("Left key pressed")
-            elif event.key() == Qt.Key_L:
-                print("Right key pressed")
-            elif event.key() == Qt.Key_I:
-                print("Forward key pressed")
-            elif event.key() == Qt.Key_K:
-                print("Reverse key pressed")
 
-            elif event.key() == Qt.Key_W:
+    def keyPressEvent(self, event):
+            if event.key() == Qt.Key_J:        ### TURN RIGHT 
+                print("Left key pressed")
+                if self.is_serial_active:
+                    ##turn left engine on 
+                    value_ch=chr(self.sliderA.value())
+                    message='A'+value_ch
+                    message=message.encode('utf_8')  
+                    self.ser.write(message)     
+
+                    ##turn right engine off 
+                    value_ch_2=chr(0)
+                    message_2='B'+value_ch_2
+                    message_2=message_2.encode('utf_8')  
+                    self.ser.write(message_2)
+
+                    print(message,message_2)
+
+            elif event.key() == Qt.Key_L:      ### TURN LEFT
+                print("Right key pressed")
+                if self.is_serial_active:
+                    ##turn left engine on 
+                    value_ch=chr(self.sliderB.value())
+                    message='B'+value_ch
+                    message=message.encode('utf_8')  
+                    self.ser.write(message)     
+
+                    ##turn right engine off 
+                    value_ch_2=chr(0)
+                    message_2='A'+value_ch_2
+                    message_2=message_2.encode('utf_8')  
+                    self.ser.write(message_2)
+
+                    print(message,message_2)
+
+            elif event.key() == Qt.Key_I:      ### GO FORWARD
+                print("Forward key pressed")
+                if self.is_serial_active:
+                    ##turn left engine on 
+                    value_ch=chr(self.sliderA.value())
+                    message='A'+value_ch
+                    message=message.encode('utf_8')  
+                    self.ser.write(message)     
+
+                    ##turn right engine on 
+                    value_ch_2=chr(self.sliderB.value())
+                    message_2='B'+value_ch_2
+                    message_2=message_2.encode('utf_8')  #
+                    self.ser.write(message_2)
+
+                    print(message,message_2)
+
+
+            elif event.key() == Qt.Key_K:      ### STOP
+                print("Reverse key pressed")
+                if self.is_serial_active:
+                    ##turn left engine off 
+                    value_ch=chr(0)
+                    message='A'+value_ch
+                    message=message.encode('utf_8')  
+                    self.ser.write(message)     
+
+                    ##turn right engine off 
+                    value_ch_2=chr(0)
+                    message_2='B'+value_ch_2
+                    message_2=message_2.encode('utf_8')  
+                    self.ser.write(message_2)
+
+                    print(message,message_2)
+                
+
+            elif event.key() == Qt.Key_W:      ### GO UP
                 print("W key pressed")
-            elif event.key() == Qt.Key_S:
+                if self.is_serial_active:
+                    ##turn left engine off 
+                    value_ch=chr(self.sliderC.value())
+                    message='C'+value_ch
+                    message=message.encode('utf_8')  
+                    self.ser.write(message)     
+
+                    ##turn right engine off 
+                    value_ch_2=chr(self.sliderD.value())
+                    message_2='D'+value_ch_2
+                    message_2=message_2.encode('utf_8')  
+                    self.ser.write(message_2)
+
+                    print(message,message_2)
+            elif event.key() == Qt.Key_S:      ### STOP
                 print("S key pressed")
+                if self.is_serial_active:
+                    ##turn left engine off 
+                    value_ch=chr(0)
+                    message='C'+value_ch
+                    message=message.encode('utf_8')  ## converts to unicode
+                    self.ser.write(message)     
+
+                    ##turn right engine off 
+                    value_ch_2=chr(0)
+                    message_2='D'+value_ch_2
+                    message_2=message_2.encode('utf_8')  ## converts to unicode
+                    self.ser.write(message_2)
+
+                    print(message,message_2)
 
     def on_sliderA_value_changed(self, value):
         print(f"Slider A value changed to {value}")
-        
     def on_sliderB_value_changed(self, value):
         print(f"Slider B value changed to {value}")
     def on_sliderC_value_changed(self, value):
         print(f"Slider C value changed to {value}")
-        
     def on_sliderD_value_changed(self, value):
         print(f"Slider D value changed to {value}")
 
-    def onToggled(self, checked):
-        if checked:
-            print("Pressed")
-            
-        else:
-            print("Released")
+    def onToggled(self):    ### establishing connection via USB port (and then via RS485 module)
+        index=self.portComboBox.currentIndex()
+        value = self.portComboBox.itemText(index)
+        print(value)
+        print(type(value))
+        self.ser=serial.Serial(value, 115200)
+        self.is_serial_active=True
+
     def quit_app(self):
         self.app.quit()
 
