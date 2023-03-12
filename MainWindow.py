@@ -1,9 +1,10 @@
-from PySide6.QtWidgets import QWidget ,QMainWindow,QPushButton,QHBoxLayout,QFrame,QComboBox
-from PySide6.QtWidgets import QApplication, QWidget,QSlider,QVBoxLayout,QLabel
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtWidgets import QWidget ,QMainWindow,QPushButton,QHBoxLayout,QFrame,QComboBox,QWidget,QSlider,QVBoxLayout,QLabel
+from PySide6.QtCore import  Qt
 import serial.tools.list_ports
+import time 
+
 """
-The class that contains the main window
+The class that contains the main app
 
 """
 
@@ -12,7 +13,7 @@ class MainApp(QMainWindow,QWidget):
         super().__init__()
         self.setWindowTitle("ROV controller ver 1.0")
         self.app=app
-        self.is_serial_active=False
+        self.is_serial_active=False # is True when Serial connection is estabished
 
         menu_bar=self.menuBar()
         file_menu=menu_bar.addMenu("Menu")
@@ -22,7 +23,7 @@ class MainApp(QMainWindow,QWidget):
 
         self.setGeometry(100, 100, 400, 300)
 
-        # Setting up sliders and connecting them with functions
+        # Setting up sliders 
 
         self.sliderA = QSlider(Qt.Vertical)
         self.sliderB = QSlider(Qt.Vertical)
@@ -45,65 +46,57 @@ class MainApp(QMainWindow,QWidget):
         self.sliderD.setMaximum(250)
         self.sliderD.setValue(50)
 
-        self.sliderA.valueChanged.connect(self.on_sliderA_value_changed)
-        self.sliderB.valueChanged.connect(self.on_sliderB_value_changed)
-        self.sliderC.valueChanged.connect(self.on_sliderC_value_changed)
-        self.sliderD.valueChanged.connect(self.on_sliderD_value_changed)
 
-        ### USB Port menu box 
+        ### USB Port menu box , lists all available ports 
 
         self.portComboBox = QComboBox(self)
         self.portComboBox.setGeometry(50, 50, 200, 30)
         ports = serial.tools.list_ports.comports()
         for port in ports:
             self.portComboBox.addItem(port.device)
-
         
-
-        layout=QVBoxLayout()
-
+        # Row 0
         row_0=QHBoxLayout()
-
-        labelA = QLabel("Engine A")
-        labelB = QLabel("Engine B")
-        labelC = QLabel("Engine C")
-        labelD = QLabel("Engine D")
-
-        row_0.addWidget(labelA)
-        row_0.addWidget(labelB)
-        row_0.addWidget(labelC)
-        row_0.addWidget(labelD)
-
-        row_1=QHBoxLayout()
-        row_1.addWidget(self.sliderA)
-        row_1.addWidget(self.sliderB)
-        row_1.addWidget(self.sliderC)
-        row_1.addWidget(self.sliderD)
-        
-        row_2=QHBoxLayout()
         labelPort = QLabel("Port:")
-        row_2.addWidget(labelPort)
-        row_2.addWidget(self.portComboBox)
+        row_0.addWidget(labelPort)
+        row_0.addWidget(self.portComboBox)
 
         button = QPushButton("Connect!")
-        button.clicked.connect(self.onToggled)
-        row_2.addWidget(button)
+        button.clicked.connect(self.connect_pressed)
+        row_0.addWidget(button)
 
+        # Separating line 
         line = QFrame()
         line.setFrameShape(QFrame.HLine) 
         line.setFrameShadow(QFrame.Sunken)
 
+        # Row 1
+        row_1=QHBoxLayout()
+        labelA = QLabel("Engine A")
+        labelB = QLabel("Engine B")
+        labelC = QLabel("Engine C")
+        labelD = QLabel("Engine D")
+        row_1.addWidget(labelA)
+        row_1.addWidget(labelB)
+        row_1.addWidget(labelC)
+        row_1.addWidget(labelD)
 
-
-
+        # Row 2
+        row_2=QHBoxLayout()
+        row_2.addWidget(self.sliderA)
+        row_2.addWidget(self.sliderB)
+        row_2.addWidget(self.sliderC)
+        row_2.addWidget(self.sliderD)
+        
         ### generates overall main shape of the app
-        layout.addLayout(row_2)
-        layout.addWidget(line)
-        layout.addLayout(row_0)
-        layout.addLayout(row_1)
+        main_layout=QVBoxLayout()
+        main_layout.addLayout(row_0)
+        main_layout.addWidget(line)
+        main_layout.addLayout(row_1)
+        main_layout.addLayout(row_2)
 
         widget=QWidget()
-        widget.setLayout(layout)
+        widget.setLayout(main_layout)
         
         self.setCentralWidget(widget)
 
@@ -114,116 +107,77 @@ class MainApp(QMainWindow,QWidget):
             if event.key() == Qt.Key_J:        ### TURN RIGHT 
                 print("Left key pressed")
                 if self.is_serial_active:
-                    ##turn left engine on 
-                    value_ch=chr(self.sliderA.value())
-                    message='A'+value_ch
-                    message=message.encode('utf_8')  
-                    self.ser.write(message)     
-
-                    ##turn right engine off 
-                    value_ch_2=chr(0)
-                    message_2='B'+value_ch_2
-                    message_2=message_2.encode('utf_8')  
-                    self.ser.write(message_2)
-
-                    print(message,message_2)
+                    # turn left engine on 
+                    self.send_via_USB('A',self.sliderA.value())
+                    # turn right engine off
+                    time.sleep(0.001)
+                    self.send_via_USB('B',int(0))
 
             elif event.key() == Qt.Key_L:      ### TURN LEFT
                 print("Right key pressed")
                 if self.is_serial_active:
-                    ##turn left engine on 
-                    value_ch=chr(self.sliderB.value())
-                    message='B'+value_ch
-                    message=message.encode('utf_8')  
-                    self.ser.write(message)     
+                    ##turn right engine on 
+                    self.send_via_USB('B',self.sliderB.value())
+                    ##turn left engine off
+                    time.sleep(0.001)
+                    self.send_via_USB('A',int(0))
 
-                    ##turn right engine off 
-                    value_ch_2=chr(0)
-                    message_2='A'+value_ch_2
-                    message_2=message_2.encode('utf_8')  
-                    self.ser.write(message_2)
-
-                    print(message,message_2)
 
             elif event.key() == Qt.Key_I:      ### GO FORWARD
                 print("Forward key pressed")
                 if self.is_serial_active:
                     ##turn left engine on 
-                    value_ch=chr(self.sliderA.value())
-                    message='A'+value_ch
-                    message=message.encode('utf_8')  
-                    self.ser.write(message)     
-
+                    self.send_via_USB('A',self.sliderA.value())
                     ##turn right engine on 
-                    value_ch_2=chr(self.sliderB.value())
-                    message_2='B'+value_ch_2
-                    message_2=message_2.encode('utf_8')  #
-                    self.ser.write(message_2)
-
-                    print(message,message_2)
+                    time.sleep(0.001)
+                    self.send_via_USB('B',self.sliderB.value())
 
 
             elif event.key() == Qt.Key_K:      ### STOP
                 print("Reverse key pressed")
                 if self.is_serial_active:
                     ##turn left engine off 
-                    value_ch=chr(0)
-                    message='A'+value_ch
-                    message=message.encode('utf_8')  
-                    self.ser.write(message)     
-
+                    self.send_via_USB('A',0)
                     ##turn right engine off 
-                    value_ch_2=chr(0)
-                    message_2='B'+value_ch_2
-                    message_2=message_2.encode('utf_8')  
-                    self.ser.write(message_2)
-
-                    print(message,message_2)
+                    time.sleep(0.001)
+                    self.send_via_USB('B',0)
                 
 
             elif event.key() == Qt.Key_W:      ### GO UP
                 print("W key pressed")
                 if self.is_serial_active:
-                    ##turn left engine off 
-                    value_ch=chr(self.sliderC.value())
-                    message='C'+value_ch
-                    message=message.encode('utf_8')  
-                    self.ser.write(message)     
-
+                     ##turn left engine off 
+                    self.send_via_USB('C',self.sliderC.value())
                     ##turn right engine off 
-                    value_ch_2=chr(self.sliderD.value())
-                    message_2='D'+value_ch_2
-                    message_2=message_2.encode('utf_8')  
-                    self.ser.write(message_2)
+                    time.sleep(0.001)
+                    self.send_via_USB('D',self.sliderD.value())
 
-                    print(message,message_2)
+            
             elif event.key() == Qt.Key_S:      ### STOP
                 print("S key pressed")
                 if self.is_serial_active:
-                    ##turn left engine off 
-                    value_ch=chr(0)
-                    message='C'+value_ch
-                    message=message.encode('utf_8')  ## converts to unicode
-                    self.ser.write(message)     
-
+                     ##turn left engine off 
+                    self.send_via_USB('C',0)
                     ##turn right engine off 
-                    value_ch_2=chr(0)
-                    message_2='D'+value_ch_2
-                    message_2=message_2.encode('utf_8')  ## converts to unicode
-                    self.ser.write(message_2)
+                    time.sleep(0.001)
+                    self.send_via_USB('D',0)
 
-                    print(message,message_2)
 
-    def on_sliderA_value_changed(self, value):
-        print(f"Slider A value changed to {value}")
-    def on_sliderB_value_changed(self, value):
-        print(f"Slider B value changed to {value}")
-    def on_sliderC_value_changed(self, value):
-        print(f"Slider C value changed to {value}")
-    def on_sliderD_value_changed(self, value):
-        print(f"Slider D value changed to {value}")
+    def send_via_USB(self,engine: chr,value : int):      ### method for sending signals via USB - needs engine name and speed value 
 
-    def onToggled(self):    ### establishing connection via USB port (and then via RS485 module)
+        assert value >=0, f"Value {value} needs to be between 0 and 250"
+        assert value <=250, f"Value {value} needs to be between 0 and 250"
+        
+
+        message=engine
+        message=message.encode(encoding='ascii')         
+        val=value
+        data_bytes=val.to_bytes(1,byteorder='little') 
+
+        self.ser.write(message)   
+        self.ser.write(data_bytes)
+
+    def connect_pressed(self):    ### establishing connection via USB port (and then via RS485 module)
         index=self.portComboBox.currentIndex()
         value = self.portComboBox.itemText(index)
         print(value)
